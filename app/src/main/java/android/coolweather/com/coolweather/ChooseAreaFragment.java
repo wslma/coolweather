@@ -1,9 +1,11 @@
 package android.coolweather.com.coolweather;
 
 import android.app.ProgressDialog;
+import android.content.Intent;
 import android.coolweather.com.coolweather.db.City;
 import android.coolweather.com.coolweather.db.Conty;
 import android.coolweather.com.coolweather.db.Province;
+import android.coolweather.com.coolweather.gson.Weather;
 import android.coolweather.com.coolweather.util.HttpUtil;
 import android.coolweather.com.coolweather.util.Utility;
 import android.os.Bundle;
@@ -88,11 +90,19 @@ public class ChooseAreaFragment extends Fragment{
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 //判断当前级数是否是省级
                 if(currentLevel == LEVEL_PROVINCE){
+                    //选中哪一个省份
                     selectedProvince = provinceList.get(position);
+                    //查询该省份的城市
                     queryCities();
                 }else if(currentLevel == LEVEL_CITY){
                     selectedCity = cityList.get(position);
                     queryCounties();
+                }else if(currentLevel == LEVEL_COUTY){
+                    String weatherId = contyList.get(position).getWeatherId();
+                    Intent intent = new Intent(getActivity(), WeatherActivity.class);
+                    intent.putExtra("weather_id",weatherId);
+                    startActivity(intent);
+                    getActivity().finish();
                 }
             }
         });
@@ -113,9 +123,11 @@ public class ChooseAreaFragment extends Fragment{
      * 查询全国所有的市，优先从数据库查询，如果没有查询到再去服务器查询
      */
     private void queryCities() {
+        //将标题设置成省份名
         titleText.setText(selectedProvince.getProvinceName());
         //显示返回按钮
         backButton.setVisibility(View.VISIBLE);
+        //查询省份中的城市
         cityList = DataSupport.where("provinceid = ?",String.valueOf(selectedProvince
                 .getId())).find(City.class);
         if(cityList.size() > 0){
@@ -123,12 +135,16 @@ public class ChooseAreaFragment extends Fragment{
             for(City city : cityList){
                 dataList.add(city.getCityName());
             }
+            //动态更新ListView
             adapter.notifyDataSetChanged();
+            //使ListView定位到指定的列中
             listView.setSelection(0);
             currentLevel = LEVEL_CITY;
         }else {
+            //获取当前的省份编码
             int provinceCode = selectedProvince.getProvinceCode();
             String address = "http://guolin.tech/api/china/" + provinceCode;
+            //从服务器查询
             queryFromSever(address,"city");
         }
     }
